@@ -6,23 +6,45 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public abstract class Validator {
+/**
+ *
+ */
+public class Validator {
 
-    public static List<ValidationError> getErrors(Supplier<ValidationError>[] validators){
-        return Arrays.stream(validators)
+    /**
+     *
+     * @param validators an array of Suppliers that return a ValidationError (or hopefully null)
+     * @return a list of ValidationErrors provided by the validators
+     */
+    @SafeVarargs
+    private final List<ValidationError> getErrors(Supplier<ValidationError>... validators){
+        return Arrays.stream(validators).parallel()
                 .map(Supplier::get)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
+    /**
+     *
+     * @param functionToCallIfValidationPasses the function that will be executed if none of the suppliers return a ValidationError
+     * @param validators an array of Suppliers that return a ValidationError (or hopefully null)
+     * @param <T> The return type of the function that will be executed if there are no validation errors
+     * @return the result of the function passed in as the first parameter
+     * @throws ValidationException if any of the validators return a ValidationError
+     */
     @SafeVarargs
-    public static <T> T runIfValid(Supplier<T> functionToCallIfValidationPasses, Supplier<ValidationError>... validators) throws ValidationException {
+    public final <T> T runIfValid(Supplier<T> functionToCallIfValidationPasses, Supplier<ValidationError>... validators) throws ValidationException {
         validate(validators);
         return functionToCallIfValidationPasses.get();
     }
 
+    /**
+     *
+     * @param validators an array of Suppliers that return a ValidationError (or hopefully null)
+     * @throws ValidationException if any of the validators return a ValidationError
+     */
     @SafeVarargs
-    public static void validate(Supplier<ValidationError>... validators) throws ValidationException {
+    public final void validate(Supplier<ValidationError>... validators) throws ValidationException {
         List<ValidationError> errors = getErrors(validators);
         if(!errors.isEmpty()){
             throw new ValidationException(errors);
